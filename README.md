@@ -8,7 +8,8 @@ Set MAILCHIMP_APIKEY to .env-file
 MAILCHIMP_APIKEY=123
 ```
 
-Example of usage
+## Example of usage
+For all methods see lib/mailchimp_wrapper.rb
 ```bash
 item = MailchimpWrapper.new(ENV['MAILCHIMP_APIKEY'], true)
 item.get_lists
