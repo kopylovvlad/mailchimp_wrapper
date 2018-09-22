@@ -9,7 +9,7 @@ MAILCHIMP_APIKEY=123
 ```
 
 ## Example of usage
-For all methods see lib/mailchimp_wrapper.rb
+For all methods see [lib/mailchimp_wrapper.rb](https://github.com/kopylovvlad/mailchimp_wrapper/blob/master/lib/mailchimp_wrapper.rb)
 ```bash
 item = MailchimpWrapper.new(ENV['MAILCHIMP_APIKEY'], true)
 item.get_lists
