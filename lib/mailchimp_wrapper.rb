@@ -2,75 +2,52 @@ require 'dotenv'
 require 'mailchimp3'
 Dotenv.load
 
-# ENV['MAILCHIMP_APIKEY']
 
-class MailchimpTest
+class MailchimpWrapper
   VERSION = "0.1.0".freeze
+  attr_accessor :debug
+  attr_reader :api
 
-  def initialize(api_key)
-    @api = MailChimp3.new(basic_auth_key: ENV['MAILCHIMP_APIKEY'])
+  def initialize(api_key, debug)
+    @api = MailChimp3.new(basic_auth_key: api_key)
+    @debug = debug
   end
+
   ##
   # LISTS CRUD
   ##
 
   # get lists
-  # @param debug [Boolean] print hash to console
   # @return [Hash] answer from server
-  def self.get_lists(debug = true)
-    api = MailChimp3.new(basic_auth_key: ENV['MAILCHIMP_APIKEY'])
-
+  def get_lists
+    answer = @api.lists.get
     short_answer = {
-      'lists' => [],
-      'total_items' => 0
+      'total_items' => answer['total_items']
     }
-    answer = api.lists.get
-    short_answer['total_items'] = answer['total_items']
     short_answer['lists'] = answer['lists'].map do |i|
-      {
-        'id' => i['id'],
-        'web_id' => i['web_id'],
-        'name' => i['name']
-      }
+      i.slice('id', 'web_id', 'name')
     end
 
-    debug(short_answer) if debug = true
-
+    pp(short_answer) if @debug == true
     short_answer
   end
 
-  def self.debug(hash)
-    puts JSON.pretty_generate(hash).gsub(":", " =>")
-  end
-
   # get one list
-  # @param debug [Boolean] print hash to console
+  # @param list_id [String] id
   # @return [Hash] answer from server
-  def self.get_list(list_id = '05d8c607fd', debug=true)
-    api = MailChimp3.new(basic_auth_key: ENV['MAILCHIMP_APIKEY'])
-    short_answer = {
-      'id' => 0,
-      'web_id' => 0,
-      'name' => 0,
-      'stats' => {
-        'member_count' => 0,
-        'unsubscribe_count' => 0
-      }
-    }
-    answer = api.lists[list_id].get
-    short_answer['id'] = answer['id']
-    short_answer['web_id'] = answer['web_id']
-    short_answer['name'] = answer['name']
-    short_answer['stats'] = answer['stats']
+  def get_list(list_id = '05d8c607fd')
+    answer = @api.lists[list_id].get
+    short_answer = answer.slice('id', 'web_id', 'name', 'stats')
 
-    puts JSON.pretty_generate(short_answer).gsub(":", " =>")
+    pp(short_answer) if @debug == true
     short_answer
   end
 
   # create a list
-  def self.create_list
-    api = MailChimp3.new(basic_auth_key: ENV['MAILCHIMP_APIKEY'])
-    answer = api.lists.post(
+  # @param hash [Hash] data about new list
+  # @return [Hash] answer from server
+  def create_list(hash = {})
+    answer = @api.lists.post(
       name: 'Church.IO',
       email_type_option: false,
       permission_reminder: 'signed up on https://church.io',
@@ -90,17 +67,18 @@ class MailchimpTest
       },
     )
 
-    puts JSON.pretty_generate(answer).gsub(":", " =>")
+    pp(answer) if @debug == true
     answer
   end
 
   # delete a list
-  #
-  def self.delete_list(list_id = 'fbb2a98cd4')
+  # @param list_id [String] id
+  # @return [Boolean] answer from server
+  def delete_list(list_id = 'fbb2a98cd4')
     api = MailChimp3.new(basic_auth_key: ENV['MAILCHIMP_APIKEY'])
     answer = api.lists[list_id].delete
 
-    puts JSON.pretty_generate(answer).gsub(":", " =>")
+    pp(answer) if @debug == true
     answer
   end
 
@@ -109,42 +87,152 @@ class MailchimpTest
   ##
 
   # get list's members
-  def self.lists_members(list_id = '05d8c607fd')
+  # @param list_id [String] id
+  # @return [Hash] answer from server
+  def get_list_members(list_id = '05d8c607fd')
     api = MailChimp3.new(basic_auth_key: ENV['MAILCHIMP_APIKEY'])
-    short_answer = {
-      'list_id' => 0,
-      'total_items' => 0,
-      'members' => []
-    }
 
     answer = api.lists[list_id].members.get
-    short_answer['list_id'] = answer['list_id']
-    short_answer['total_items'] = answer['total_items']
+    short_answer = {
+      'list_id' => answer['list_id'],
+      'total_items' => answer['total_items']
+    }
     short_answer['members'] = answer['members'].map do |i|
-      {
-        'id' => i['id'],
-        'email_address' => i['email_address'],
-        'unique_email_id' => i['unique_email_id']
-      }
+      i.slice('id', 'email_address', 'unique_email_id')
     end
 
-    puts JSON.pretty_generate(short_answer).gsub(":", " =>")
+    pp(short_answer) if @debug == true
     short_answer
   end
 
-  ##
-  # create new list
+  # get list's member
+  # @param list_id [String] list id
+  # @param member_id [String] member id
+  # @return [Hash] answer from server
+  def get_list_member(list_id = '05d8c607fd',
+                      member_id = '571a81bf307adf68f4b016a2ae499ef1')
+    answer = @api.lists[list_id].members[member_id].get
+    short_answer = answer
+                   .slice('id', 'email_address', 'unique_email_id', 'status')
+
+    pp(short_answer) if @debug == true
+    short_answer
+  end
+
+  # add member to list
+  # @param list_id [String] list id
+  # @param member [Hash] data about new member
+  # @return [Hash] answer from server
+  def create_list_member(list_id = '05d8c607fd', hash = {})
+    answer = @api.lists[list_id].members.post(
+      email_address: "zxcxcvxcv1@tmail.com",
+      status: 'subscribed'
+    )
+
+    pp(answer) if @debug == true
+    answer
+  end
+
+  # add members to list
+  # @param list_id [String] list id
+  # @param hash [Hash] data about new members
+  # @return [Hash] answer from server
+  def create_list_members(list_id = '05d8c607fd', hash = {})
+    answer = @api.lists[list_id].post(
+      members: [
+        {
+          email_address: "zxcxcvxcv2@tmail.com",
+          status: 'subscribed'
+        },
+        {
+          email_address: "zxcxcvxcv3@tmail.com",
+          status: 'subscribed'
+        }
+      ],
+      update_existing: false
+    )
+
+    pp(answer) if @debug == true
+    answer
+  end
+
+  # delete member from list
+  # @param list_id [String] list id
+  # @param member_id [String] member id
+  # @return [Boolean] answer from server
+  def delete_list_member(list_id = '05d8c607fd',
+                         member_id = '7f2effe9e6b371add87d4d980a0b8c97')
+    answer = @api.lists[list_id].members[member_id].delete
+    pp(answer) if @debug == true
+    answer
+  end
 
   ##
-  # add subscribers to Mailchimp
-
+  # Campaign
   ##
-  # load subscribers from Mailchimp
 
-  ##
-  # clone campaign with new subscriber's list
+  # get campaigns
+  # @return [Hash] answer from server
+  def get_campaigns
+    answer = @api.campaigns.get
+    short_answer = {
+      'total_items' => answer['total_items']
+    }
+    puts answer
+    short_answer['campaigns'] = answer['campaigns'].map do |i|
+      h = i.slice('id', 'web_id', 'type', 'status', 'emails_sent')
+      h['title'] = i['settings']['title']
+      h
+    end
+
+    pp(short_answer) if @debug == true
+    short_answer
+  end
+
+  # get campaign
+  # @param campaign_id [String] campaign id
+  # @return [Hash] answer from server
+  def get_campaign(campaign_id = '490b7bf7ba')
+    answer = @api.campaigns[campaign_id].get
+    short_answer = answer.slice('id', 'web_id', 'type', 'status', 'emails_sent')
+    pp(short_answer) if @debug == true
+    short_answer
+  end
+
+  # create campaign
+  # @param hash [Hash] data
+  # @return [Boolean] answer from server
+  def create_campaign(hash = {})
+    answer = @api.campaigns.post(
+      type: 'regular',
+      recipients: {
+        list_id: '05d8c607fd'
+      },
+      settings: {
+        title: 'my new campaigns #1'
+      }
+    )
+
+    pp(answer) if @debug == true
+    answer
+  end
+
+  # delete campaign
+  # @param campaign_id [String] id
+  # @return [Boolean] answer from server
+  def delete_campaign(campaign_id = 'e77d13b63b')
+    answer = @api.campaigns[campaign_id].delete
+    pp(answer) if @debug == true
+    answer
+  end
+
+  # TODO: clone campaign
+  # TODO: send campaign
+
+  private
+
+  def pp(hash)
+    puts JSON.pretty_generate(hash).gsub(":", " =>")
+  end
 end
 
-
-# example
-MailchimpTest
